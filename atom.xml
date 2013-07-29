@@ -1,16 +1,153 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[My Octopress Blog]]></title>
+  <title><![CDATA[James Dempsey]]></title>
   <link href="http://jamesdempsey.github.io/atom.xml" rel="self"/>
   <link href="http://jamesdempsey.github.io/"/>
-  <updated>2013-07-28T20:25:47-04:00</updated>
+  <updated>2013-07-28T23:35:59-04:00</updated>
   <id>http://jamesdempsey.github.io/</id>
   <author>
-    <name><![CDATA[Your Name]]></name>
+    <name><![CDATA[James Dempsey]]></name>
     
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    
+    <title type="html"><![CDATA[Restoring a single PostgreSQL table from Heroku PGBackups]]></title>
+    <link href="http://jamesdempsey.github.io/blog/2013/07/28/restoring-a-single-postgresql-table-from-heroku-pgbackups/"/>
+    
+    <updated>2013-07-28T22:16:00-04:00</updated>
+    <id>http://jamesdempsey.github.io/blog/2013/07/28/restoring-a-single-postgresql-table-from-heroku-pgbackups</id>
+    
+    <content type="html"><![CDATA[<p>The following code uses the default Heroku app in the given folder. If there
+are multiple apps in the folder, specify the app with <code>-a APP, --app APP</code>
+where necessary.</p>
+
+<p>Before beginning, it&rsquo;s a good idea to capture a current backup of the
+database by running the following command, in case anything goes wrong. The
+<code>--expire</code> switch deletes the oldest backup.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>heroku pgbackups:capture --expire
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>1. Get a list of database backups</h3>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>heroku pgbackups
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>2. Download a database dump from a backup</h3>
+
+<p>Here, <code>a405</code> is the backup name, obtained above.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>curl -o mydb.dump <span class="sb">`</span>heroku pgbackups:url a405<span class="sb">`</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>3. Create a local database</h3>
+
+<p>You&rsquo;ll need to set up a local database to import the data and then extract the
+table.  You can set one up as follows.  The local database name will be used
+in the following example as well, if you&rsquo;re using a pre-existing local database.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>createdb mydb
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>4. Restore the local database from the dump file</h3>
+
+<p>Replace the user name and change any other switches as necessary.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>pg_restore --verbose --clean --no-acl --no-owner -h localhost -U myuser -d mydb mydb.dump
+</span></code></pre></td></tr></table></div></figure>
+
+
+<h3>5. Dump the table</h3>
+
+<p>Selectively dump the table by running the following command specifying the table
+name in the <code>-t mytable</code> switch.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>pg_dump -Fc --no-acl --no-owner -h localhost -U myuser -t mytable mydb &gt; mytable.dump
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You can find the table name by opening the database in the PostgreSQL terminal</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>psql mydb
+</span></code></pre></td></tr></table></div></figure>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="n">mydb</span><span class="o">=#</span> <span class="err">\</span><span class="n">dt</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>where <code>\dt</code> outputs a list of all database table names (relations).</p>
+
+<h3>6. Upload the table dump file</h3>
+
+<p>In order to import the dump file into the database on Heroku,
+<a href="https://devcenter.heroku.com/articles/heroku-postgres-import-export#import-to-heroku-postgres">Heroku requires that the dump file be uploaded somewhere with an HTTP-accessible URL</a>.
+They recommend Amazon S3, so upload the the <code>mytable.dump</code> dump file of the
+database table to an S3 bucket using a tool such as
+<a href="http://cyberduck.ch/">Cyberduck</a>.</p>
+
+<h3>7. Restore the table dump into the database</h3>
+
+<p>Heroku will ask you to confirm by entering the app name.  The default <code>DATABASE</code>
+should work.  Tables not included in the backup should not be affected.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>heroku pgbackups:restore DATABASE <span class="s1">&#39;http://app.s3.amazonaws.com/app/path/to/mytable.dump&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>As noted at the beginning, if anything goes wrong and you need to restore from
+the most recent backup, that can be accomplished with the following command,
+where <code>a405</code> is the name of the backup obtained with the command in step 1:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>heroku pgbackups:restore DATABASE a405
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>You probably don&rsquo;t want that data lying around locally, especially if it&rsquo;s
+production data, so drop the local database and delete the dump files locally
+and from the S3 bucket.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='sh'><span class='line'><span class="nv">$ </span>dropdb mydb
+</span><span class='line'><span class="nv">$ </span>rm -P mydb.dump
+</span><span class='line'><span class="nv">$ </span>rm -P mytable.dump
+</span></code></pre></td></tr></table></div></figure>
+
+
+<hr />
+
+<h3>Sources:</h3>
+
+<ul>
+<li><a href="https://devcenter.heroku.com/articles/pgbackups">Heroku PG Backups</a></li>
+<li><a href="https://devcenter.heroku.com/articles/heroku-postgres-import-export">Importing and Exporting Heroku Postgres Databases with PG Backups</a></li>
+<li><a href="http://cyberduck.ch/">Cyberduck</a></li>
+<li><a href="http://feeding.cloud.geek.nz/posts/restoring-single-table-from-postgres/">Restoring a single table from a Postgres database or backup</a></li>
+<li><a href="http://stackoverflow.com/questions/16908165/upload-only-one-table-using-heroku-pgtransfer-instead-of-whole-database">Upload only one table using heroku pg:transfer instead of whole database</a></li>
+</ul>
+
+]]></content>
+    
+  </entry>
   
 </feed>
