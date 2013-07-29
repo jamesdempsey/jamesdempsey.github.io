@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: 
+
+Sitemap: http://jamesdempsey.github.io/sitemap.xml 
