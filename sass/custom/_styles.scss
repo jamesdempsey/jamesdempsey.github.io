@@ -176,3 +176,10 @@ figure.code {
 aside {
 	display: none;
 }
+
+@each $prefix in ('-webkit-', '-moz-', '-o-', '') {
+  .gist .highlight ::#{$prefix}selection, figure.code .highlight ::#{$prefix}selection {
+    background: none;
+    text-shadow: none;
+  }
+}
