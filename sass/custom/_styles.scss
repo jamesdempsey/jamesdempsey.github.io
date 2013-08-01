@@ -187,3 +187,12 @@ aside {
 figure.code figcaption {
   border-top-width: 0;
 }
+
+hr {
+    border: 0;
+    height: 1px;
+    background: #333;
+    @each $prefix in ('-webkit-', '-moz', '-ms', '-o-') {
+      background-image: #{$prefix}linear-gradient(left, #ccc, #333, #ccc);
+    }
+}
